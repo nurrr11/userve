@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UServe - Organizer</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <img src="organizer_logo.png" alt="OrganizerLogo" width="100" height="100" style="margin-bottom: 10px;">
+            <nav>
+                <button class="nav-btn active" onclick="showPage('dashboard')">Dashboard</button>
+                <button class="nav-btn" onclick="showPage('eventManagement')">Event Workspace</button>
+                <button class="nav-btn" onclick="showPage('certificates')">e-Certificates</button>
+                <button class="nav-btn" onclick="showPage('gratuity')">Gratuity</button>
+                <button class="nav-btn" onclick="showPage('issueReport')">Report Centre</button>
+                <button class="nav-btn" onclick="showPage('organizerChat')">Chat Centre</button>
+                <button class="nav-btn" onclick="showPage('profile')">Profile</button>
+                <button onclick="logout()" class="btn-logout">Logout</button>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Dashboard Page -->
+            <div id="dashboardPage" class="page active">
+                <h1>Performance and Volunteer Involvement Overview</h1>
+                <div id="organizerAnalyticsContainer" class="analytics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-top: 20px;">
+                </div>
+
+                <div class="card" style="margin-top: 25px; padding: 20px; background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                    <h3 style="color: #821131; margin-bottom: 15px; text-align: center;">Volunteers Participation Overview</h3>
+                    <canvas id="organizerChart" style="max-height: 320px; width: 100%; margin-top: 15px;"></canvas>
+                </div>
+            </div>
+
+            <!-- Event Management Page -->
+            <div id="eventManagementPage" class="page">
+                <div class="page-header">
+                    <h1>Event Management</h1>
+                    <button class="btn btn-primary" style="margin-right: 2%;" onclick="showCreateEventModal()">New Event</button>
+                </div>
+                <div id="eventsList" class="events-grid"></div>
+
+                <!-- Create Event Modal -->
+                <div id="createEventModal" class="modal">
+                    <div class="modal-content" style="background-color: #fff8e6;">
+                        <span class="close" onclick="closeModal()">&times;</span>
+                        <h2 style="color: #821131;">Create New Event</h2>
+                        <div class="form-group">
+                            <label style="color: #821131;">Event Name</label>
+                            <input type="text" id="eventName" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label style="color: #821131;">Description</label>
+                            <textarea id="eventDesc" rows="3" class="form-control"></textarea>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label style="color: #821131;">Date</label>
+                                <input type="date" id="eventDate" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label style="color: #821131;">Time</label>
+                                <input type="time" id="eventTime" class="form-control">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label style="color: #821131;">Location</label>
+                            <input type="text" id="eventLocation" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label style="color: #821131;">Available Slots</label>
+                            <input type="number" id="eventSlots" class="form-control" value="50">
+                        </div>
+                        <button id="modalMainBtn" class="btn btn-secondary" onclick="createEvents()">Create Event</button>
+                    </div>
+                </div>
+                
+                <!-- Volunteers Section -->
+                <!-- Inside Organizer Event Management / Volunteers View -->
+                <div class="card">
+                    <h3 style="color: #821131;">Volunteer Attendance & FCFS Waitlist Queue</h3>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="eventSelect" style="color: #821131;"><strong>Select Event:</strong></label>
+                        <select id="eventSelect" class="form-control" onchange="loadVolunteers()">
+                            <option value="">Select Event</option>
+                        </select>
+                    </div>
+
+                    <!-- This container will display both registered volunteers and the live FCFS Waitlist -->
+                    <div id="volunteersTable">
+                        <p class="text-muted">Select an event from the dropdown above to view registered volunteers.</p>
+                    </div>
+                </div>
+                
+                <!-- Events Report Section -->
+                <h3 style="margin-top: 30px;">Events Report</h3>
+                <button class="btn btn-primary" onclick="refreshEventReport()">Refresh Report</button>
+                <div id="eventReportsTable" class="table-container"></div>
+            </div>
+
+            <!-- e-Certificates Page -->
+            <div id="certificatesPage" class="page">
+                <h1>e-Certificate Generator</h1>
+                <select id="certEventSelect" class="form-select" onchange="loadCertificates()">
+                    <option value="">Select Event to Generate Certificates</option>
+                </select>
+                <button class="btn btn-primary" onclick="generateCertificates()">Generate e-Certificates for Present Volunteers</button>
+                <div id="certificatesList" class="certificates-list"></div>
+            </div>
+
+            <!-- Gratuity Page -->
+            <div id="gratuityPage" class="page" style="display:none;">
+                <h1>Gratuity Management</h1>
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Volunteer ID</th>
+                                    <th>Event ID</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="gratuityTable">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Issue Report Page -->
+            <div id="issueReportPage" class="page" style="display:none;">
+                <h1>Issue Reports Centre</h1>
+                <div class="card">
+                    <div class="form-group">
+                        <label>Issue Details</label>
+                        <textarea id="issueDetails" rows="4" class="form-control" placeholder="Please describe the issue you're experiencing. (Example: technical glitch, student misconduct, equipment damage)"></textarea>
+                    </div>
+                    <button class="btn btn-secondary" onclick="submitIssueReport()">Submit</button>
+                </div>
+
+                <h3 style="margin-top: 25px;">My Previous Reports</h3>
+                <div id="myReportsList"></div>
+            </div>
+
+            <!-- Profile Page -->
+            <div id="profilePage" class="page" style="display:none;">
+                <h1>Organizer Profile</h1>
+                <div class="card">
+                    <div id="profileInfo"></div>
+                    <hr style="margin: 20px 0;">
+                    <h3 style="color: #821131;">Change Password</h3>
+                    <div class="form-group">
+                        <label style="color: #821131;">Current Password</label>
+                        <input type="password" id="currentPassword" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label style="color: #821131;">New Password</label>
+                        <input type="password" id="newPassword" class="form-control">
+                        <small class="text-muted">*Must be at least 8 characters, including uppercase, lowercase, number, and special character.</small>
+                    </div>
+                    <div class="form-group">
+                        <label style="color: #821131;">Confirm New Password</label>
+                        <input type="password" id="confirmPassword" class="form-control">
+                    </div>
+                    <button class="btn btn-secondary" onclick="updatePassword(event)">Update Password</button>
+                </div>
+            </div>
+
+            <!-- Organizer Chat -->
+            <div id="organizerChatPage" class="page" style="display:none;">
+                <h1>Messages</h1>
+                <div id="organizerChatContainer" style="margin-top: 20px;"></div>
+            </div> 
+
+            <!-- Certificate PDF/Image Viewer Modal -->
+            <div id="certViewerModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.75); z-index: 9999; flex-direction: column;">
+                <!-- Modal Navigation Toolbar -->
+                <div style="background-color: #323639; color: #ffffff; display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <strong style="font-size: 16px;">Certificate Preview</strong>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <button onclick="downloadCertAsPNG()" style="background-color: #767f85; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-weight: 600;">Download as PNG</button>
+                        <button onclick="downloadCertAsPDF()" style="background-color: #767f85; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-weight: 600;">Download as PDF</button>
+                        <button onclick="closeCertModal()" style="background-color: #dc3545; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; margin-left: 15px;">Close</button>
+                    </div>
+                </div>
+
+                <!-- Viewer Canvas Display Container -->
+                <div style="flex: 1; overflow: auto; display: flex; justify-content: center; align-items: center; padding: 20px;">
+                    <canvas id="cert-modal-canvas" style="background-color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.5); max-width: 90%; max-height: 85vh; border-radius: 4px;"></canvas>
+                </div>
+            </div>
+
+            <!-- Hidden Certificate Template for html2canvas Rendering -->
+            <div id="certTemplateWrapper" style="position: absolute; left: -9999px; top: -9999px; width: 1000px; height: 700px;">
+                <div id="certificate-template" style="width: 1000px; height: 700px; padding: 40px; background: #ffffff; border: 15px solid #821131; box-sizing: border-box; text-align: center; font-family: 'Georgia', serif; position: relative;">
+                    <div style="border: 4px double #fabc3f; height: 100%; width: 100%; padding: 30px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between;">     
+                        <h1 style="font-size: 33px; color: #821131; text-transform: uppercase; letter-spacing: 2px;">
+                            <img src="UServe_Cert_Logo.png" alt="Certificate" width="300" height="70" style="align-items: center;">
+                            Certificate of Appreciation</h1>
+                        <p style="font-size: 18px; color: #555; margin-top: 2px; margin-bottom: 2px;">This certificate is proudly presented to</p>
+                        <h2 id="cert-student-name" style="font-size: 23px; color: #821131; margin-top: 2px;">[Student Name]</h2>
+                        <p style="font-size: 18px; color: #555;">for participation and voluntary service in</p>
+                            
+                        <h3 id="cert-event-name" style="font-size: 23px; color: #821131; margin: 1px 0;">[Event Name]</h3>
+                        <p style="font-size: 18px; color: #555;">on</p>
+
+                        <p id="cert-event-details" style="font-size: 20px; color: #821131; font-weight: bold;">[Date & Location]</p>
+                        <div style="margin-top: 30px; display: flex; justify-content: space-around; align-items: flex-end;">
+                            <div style="border-top: 2px solid #821131; width: 200px; padding-top: 5px;">
+                                <p style="font-size: 14px; color: #333; margin: 0;"><strong>UServe Platform</strong></p>
+                            </div>
+                            <div style="border-top: 2px solid #821131; width: 200px; padding-top: 5px;">
+                                <p style="font-size: 14px; color: #333; margin: 0;"><strong>Event Organizer</strong></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

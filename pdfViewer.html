@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom PDF Viewer with Download</title>
+    <!-- Include PDF.js Library via CDN -->
+    <script src="https://cloudflare.com"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #525659;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        /* Top Navigation Toolbar Styles */
+        .toolbar {
+            background-color: #323639;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .btn {
+            background-color: #4a4f52;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            font-size: 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+        }
+        .btn:hover {
+            background-color: #5c6266;
+        }
+        .btn:disabled {
+            background-color: #2a2d2f;
+            color: #7a7a7a;
+            cursor: not-allowed;
+        }
+        .page-info {
+            font-size: 14px;
+            user-select: none;
+        }
+        /* Scrollable Canvas Container Styles */
+        .viewer-container {
+            flex: 1;
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+        }
+        canvas {
+            background-color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            display: block;
+            max-width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- PDF Viewer Toolbar -->
+    <div class="toolbar">
+        <div class="toolbar-group">
+            <button class="btn" id="prev-btn">Previous</button>
+            <span class="page-info">Page <span id="page-num">0</span> of <span id="page-count">0</span></span>
+            <button class="btn" id="next-btn">Next</button>
+        </div>
+        <div class="toolbar-group">
+            <!-- Native Download Link using the download attribute -->
+            <a href="#" class="btn" id="download-btn" download="document.pdf">Download PDF</a>
+        </div>
+    </div>
+
+    <!-- Container where the PDF renders -->
+    <div class="viewer-container">
+        <canvas id="pdf-render"></canvas>
+    </div>
+
+    <script>
+        // Provide a valid URL to a PDF file hosted on the same domain or CORS-enabled server
+        const pdfUrl = 'https://githubusercontent.com';
+
+        // Configure PDF.js Worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cloudflare.com';
+
+        // Viewer State Variables
+        let pdfDoc = null,
+            pageNum = 1,
+            pageIsRendering = false,
+            pageNumIsPending = null;
+
+        const scale = 1.5, // Change this value to adjust default zoom
+              canvas = document.getElementById('pdf-render'),
+              ctx = canvas.getContext('2d');
+
+        // Render the targeted page
+        const renderPage = num => {
+            pageIsRendering = true;
+
+            // Fetch the individual page
+            pdfDoc.getPage(num).then(page => {
+                // Get page viewport configurations based on scale
+                const viewport = page.getViewport({ scale });
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                const renderCtx = {
+                    canvasContext: ctx,
+                    viewport: viewport
+                };
+
+                // Render page directly to the HTML5 canvas context
+                page.render(renderCtx).promise.then(() => {
+                    pageIsRendering = false;
+
+                    if (pageNumIsPending !== null) {
+                        renderPage(pageNumIsPending);
+                        pageNumIsPending = null;
+                    }
+                });
+
+                // Output current page number to UI
+                document.getElementById('page-num').textContent = num;
+            });
+        };
+
+        // Queue page rendering if a render execution is already running
+        const queueRenderPage = num => {
+            if (pageIsRendering) {
+                pageNumIsPending = num;
+            } else {
+                renderPage(num);
+            }
+        };
+
+        // Navigate to the previous page
+        const showPrevPage = () => {
+            if (pageNum <= 1) {
+                return;
+            }
+            pageNum--;
+            queueRenderPage(pageNum);
+        };
+
+        // Navigate to the next page
+        const showNextPage = () => {
+            if (pageNum >= pdfDoc.numPages) {
+                return;
+            }
+            pageNum++;
+            queueRenderPage(pageNum);
+        };
+
+        // Get Document and Initialize Viewer
+        pdfjsLib.getDocument(pdfUrl).promise.then(pdfDoc_ => {
+            pdfDoc = pdfDoc_;
+
+            // Setup total page counts in UI
+            document.getElementById('page-count').textContent = pdfDoc.numPages;
+
+            // Bind the source URL directly to the download button
+            const downloadBtn = document.getElementById('download-btn');
+            downloadBtn.href = pdfUrl;
+
+            // Trigger initial render of page 1
+            renderPage(pageNum);
+        }).catch(err => {
+            // Error handling for failed PDF streams
+            const container = document.querySelector('.viewer-container');
+            container.innerHTML = `<div style="color: white; padding: 20px; text-align: center;">
+                <h3>Error loading PDF document</h3>
+                <p>${err.message}</p>
+            </div>`;
+        });
+
+        // Click Events for Navigation Elements
+        document.getElementById('prev-btn').addEventListener('click', showPrevPage);
+        document.getElementById('next-btn').addEventListener('click', showNextPage);
+    </script>
+</body>
+</html>

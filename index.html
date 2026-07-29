@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UServe - Login</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body style="padding: 1%;">
+    <div class="container">
+        <div id="loginSection" class="section">
+            <div class="card">
+                <h1><img src="UServe_title_logo.png" alt="UServeLogo" width="410" height="110" style="margin-bottom: 20px;"></h1>
+                <h2 style="color: #821131;">Login to Your Account</h2>
+                <div id="loginMessage" class="message" style="display:none;"></div>
+                
+                <div class="form-group">
+                    <label style="color: #821131;">Email Address</label>
+                    <input type="email" id="loginEmail" placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label style="color: #821131;">Password</label>
+                    <input type="password" id="loginPassword" placeholder="Enter your password">
+                </div>
+                <div class="form-group">
+                    <label style="color: #821131;">Login As</label>
+                    <select id="loginRole" style="color: #821131; background-color: white;">
+                        <option value="student">Student</option>
+                        <option value="organizer">Organizer</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <button onclick="login()" class="btn btn-primary" style="width:100%">Login</button>
+                
+                <div class="divider"><span style="background: #fff8e6;">Don't have an account? <a href="#" onclick="toggleAuth(true)">Register here</a></span></div>
+                
+                <div class="demo-info">
+                    <p><strong>Demo Accounts:</strong></p>
+                    <p>Student: 2023123456@student.uitm.edu.my / Student@123</p>
+                    <p>Organizer: organizer@userve.com / Org@2024</p>
+                    <p>Admin: admin@userve.com / Admin@123</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="registerBox" class="section" style="display:none;">
+            <div class="card">
+                <h1><img src="UServe_title_logo.png" alt="UServeLogo" width="410" height="110"></h1>
+                <h2 style="color: #821131; margin-top: 20px; margin-bottom: 5px;">Create an Account</h2>
+                
+                <div class="tab-switch" style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <button id="tabStudent" class="btn btn-primary" onclick="switchRegTab('student')" style="flex: 1;">Student</button>
+                    <button id="tabOrganizer" class="btn btn-secondary" onclick="switchRegTab('organizer')" style="flex: 1;">Organizer</button>
+                </div>
+
+                <div id="studentForm">
+                    <div class="form-group">
+                        <label style="color: #821131;">Student ID</label>
+                        <input type="text" id="regID" placeholder="202xxxxxxx" class="form-control"> 
+                    </div>
+                    <div class="form-group">
+                        <label style="color: #821131;">Full Name</label>
+                        <input type="text" id="regName" placeholder="Full Name" class="form-control">
+                        <small class="text-muted">*Please enter in uppercase as this will be used for e-certification purpose.</small>
+                    </div>
+                    <div class="form-group">
+                        <label style="color: #821131;">UiTM Student Email Address</label>
+                        <input type="email" id="regEmail" placeholder="202xxxxxxx@student.uitm.edu.my" class="form-control">
+                    </div>
+                    <div class="form-group">   
+                        <label style="color: #821131;">Password</label>         
+                        <input type="password" id="regPass" placeholder="Create Password" class="form-control">
+                        <small class="text-muted">*Must be at least 8 characters, uppercase, lowercase, number, and special character.</small>
+                    </div>
+                    <div class="form-group">   
+                        <label style="color: #821131;">Contact Number</label>         
+                        <input type="text" id="regContact" placeholder="Contact Number" class="form-control">
+                        <small class="text-muted">*Only digits with now '-' or space.</small>
+                    </div>
+                    <div class="form-group">   
+                        <label style="color: #821131;">Date of Birth</label>         
+                        <input type="date" id="regDOB" class="form-control">
+                    </div>
+                    <small class="text-muted">*Please ensure that all information is correct. Any falsification of information is strictly prohibited and action will be taken.</small>
+                    <button class="btn btn-primary" style="width:100%" onclick="handleRegister('student')">Sign Up as Student</button>
+                </div>
+
+                <div id="organizerForm" style="display:none;">
+                    <div class="form-group">
+                        <label style="color: #821131;">Organizer ID / SSM No.</label>
+                        <input type="text" id="orgID" placeholder="3 + Your ID / SSM Number (Digit Only)" class="form-control"> 
+                    </div>
+                    <div class="form-group">
+                        <label style="color: #821131;">Organization / Company Name</label>
+                        <input type="text" id="orgName" placeholder="Organization Name" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label style="color: #821131;">Official Email</label>
+                        <input type="email" id="orgEmail" placeholder="Gmail, Yahoo, others" class="form-control">
+                    </div>
+                    <div class="form-group">   
+                        <label style="color: #821131;">Password</label>         
+                        <input type="password" id="orgPass" placeholder="Create Password" class="form-control">
+                        <small class="text-muted">*Must be at least 8 characters, uppercase, lowercase, number, and special character.</small>
+                    </div>
+                    <div class="form-group">   
+                        <label style="color: #821131;">Organization / Company Contact Number</label>         
+                        <input type="text" id="orgContact" placeholder="Contact Number" class="form-control">
+                        <small class="text-muted">*Only digits with now '-' or space.</small>
+                    </div>
+                    <div class="form-group">
+                        <label style="color: #821131;">Organization / Company Location</label>
+                        <input type="text" id="orgCity" placeholder="Organization City" class="form-control">
+                    </div>
+                    <div class="form-group">   
+                        <label style="color: #821131;">Date of Establishment</label>         
+                        <input type="date" id="orgDOE" class="form-control">
+                        <small class="text-muted">*Please ensure that all information is correct. Any falsification of information is strictly prohibited and action will be taken.</small>
+                    </div>
+
+                    <button class="btn btn-primary" style="width:100%" onclick="handleRegister('organizer')">Sign Up as Organizer</button>
+                </div>
+
+                <div class="divider"><span style="background: #fff8e6;">
+                    Already have an account? <a href="#" onclick="toggleAuth(false)">Login here</a>
+                </span></div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UServe - Admin</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <img src="admin_logo.png" alt="AdminLogo" width="100" height="100">
+            <nav>
+                <button class="nav-btn active" onclick="showPage('adminDashboard')">Dashboard</button>
+                <button class="nav-btn" onclick="showPage('userApproval')">User Approval</button>
+                <button class="nav-btn" onclick="showPage('issueCentre')">Report Centre</button>
+                <button class="nav-btn" onclick="showPage('adminChat')">Chat Centre</button>
+                <button class="nav-btn" onclick="showPage('adminProfile')">Profile</button>                
+                <button onclick="logout()" class="btn-logout">Logout</button>
+            </nav>
+        </div>
+
+        <div class="main-content">
+            
+            <div id="adminDashboardPage" class="page active">
+                <h1>System Overview and Analytics</h1><!--Real-time performance metrics and platform involvement overview.-->      
+                <div id="adminAnalyticsContainer" class="analytics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top:20px; margin-bottom: 25px;"></div>
+                
+                <div class="card" style="padding: 20px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+                    <h3 style="color:#821131; margin-bottom: 15px; text-align: center;">Platform Distribution Overview</h3>
+                    <div style="position: relative; height: 320px; width: 100%;">
+                        <canvas id="adminAnalyticsChartCanvas"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div id="adminProfilePage" class="page">
+                <h1>Admin Profile</h1>
+                <div class="card">
+                    <div id="adminProfileInfo"></div>
+                    <hr style="margin: 20px 0;">
+                    <h3 style= "color: #821131;">Change Password</h3>
+                    <div class="form-group">
+                        <label style="color: #821131;">Current Password</label>
+                        <input type="password" id="currentPassword" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label style="color: #821131;">New Password</label>
+                        <input type="password" id="newPassword" class="form-control">
+                        <small class="text-muted">*Must be at least 8 characters, uppercase, lowercase, number, and special character.</small>
+                    </div>
+                    <div class="form-group">
+                        <label style="color: #821131;">Confirm New Password</label>
+                        <input type="password" id="confirmPassword" class="form-control">
+                    </div>
+                    <button class="btn btn-secondary" onclick="updatePassword()">Update Password</button>
+                </div>
+            </div>
+
+            <div id="userApprovalPage" class="page">
+                <h1>Pending User Approvals</h1> <!-- Review incoming student enrollment submissions requiring system activation clearance. -->
+                <div class="table-responsive" style="margin-top: 20px;">
+                    <table class="table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th>User ID</th>
+                                <th>Full Name</th>
+                                <th>Email</th>
+                                <th>Contact Number</th>
+                                <th>Role</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pendingUsersTableBody">
+                            <!-- Rows injected dynamically by script.js -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="issueCentrePage" class="page">
+                <h1>Issue Reports Centre</h1> <!--Global tracking ledger for technical support tickets logged by platform Volunteers and Organizers.-->
+                <div id="globalIssueRecords" style="margin-top: 20px;">
+                    </div>
+            </div>
+
+            <div id="adminChatPage" class="page">
+                <h1>Messages</h1> <!--Real-time terminal workspace dedicated to localized client communication handling.-->
+                <div id="adminChatContainer" style="margin-top: 20px;"></div>
+            </div>
+
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
