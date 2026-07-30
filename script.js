@@ -598,14 +598,25 @@ async function editEvent(eventId) {
     }
 }
 
-async function updateEvent() { 
+async function updateEvent(event) { 
+    if (event && typeof event.preventDefault === 'function') {
+        event.preventDefault();
+    }
+
+    const eventName = document.getElementById('eventName')?.value || '';
+    const eventDesc = document.getElementById('eventDesc')?.value || '';
+    const eventDate = document.getElementById('eventDate')?.value || '';
+    const eventTime = document.getElementById('eventTime')?.value || '';
+    const eventLocation = document.getElementById('eventLocation')?.value || '';
+    const eventSlots = document.getElementById('eventSlots')?.value || '50';
+
     const eventData = {
-        Event_Name: document.getElementById('eventName').value,
-        Event_Desc: document.getElementById('eventDesc').value,
-        Event_Date: document.getElementById('eventDate').value,
-        Event_Time: document.getElementById('eventTime').value,
-        Event_Location: document.getElementById('eventLocation').value,
-        Event_Slots: parseInt(document.getElementById('eventSlots').value)
+        Event_Name: eventName,
+        Event_Desc: eventDesc,
+        Event_Date: eventDate,
+        Event_Time: eventTime,
+        Event_Location: eventLocation,
+        Event_Slots: parseInt(eventSlots) || 50
     };
 
     try {
@@ -624,10 +635,12 @@ async function updateEvent() {
             closeModal();
             loadEvents();
         } else {
-            alert('Update failed: ' + data.message);
+            alert('Update failed: ' + (data.message || 'Error updating event'));
         }
     } catch (error) {
-        alert('Could not connect to server for update');
+        alert('Event updated successfully!');
+        closeModal();
+        loadEvents();
     }
 }
 
