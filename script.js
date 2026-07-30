@@ -1165,25 +1165,37 @@ async function openChatWithUser(targetId, targetName, targetRole) {
     if (!exists) {
         activeContactsList.unshift({
             id: targetIdStr,
-            name: targetName || 'User',
-            role: targetRole || 'student'
+            name: targetName || 'Organizer',
+            role: targetRole || 'organizer'
         });
     }
 
-    let chatPageId = 'studentChat';
-    if (currentUser.role === 'organizer') chatPageId = 'organizerChat';
-    if (currentUser.role === 'admin') chatPageId = 'adminChat';
-
-    showPage(chatPageId);
-
-    const listContainer = document.getElementById('chatContactsList');
-    if (listContainer) {
-        listContainer.innerHTML = renderContactsListHTML();
+    let role = 'student';
+    if (currentUser && currentUser.role) {
+        role = currentUser.role.toLowerCase();
+    } else if (window.location.pathname.includes('organizer')) {
+        role = 'organizer';
+    } else if (window.location.pathname.includes('admin')) {
+        role = 'admin';
     }
 
+    let chatPageId = 'studentChat';
+    let containerId = 'studentChatContainer';
+
+    if (role === 'organizer') {
+        chatPageId = 'organizerChat';
+        containerId = 'organizerChatContainer';
+    } else if (role === 'admin') {
+        chatPageId = 'adminChat';
+        containerId = 'adminChatContainer';
+    }
+
+    showPage(chatPageId);
+    renderChatWorkspace(containerId);
+
     setTimeout(() => {
-        selectChatUser(targetIdStr, targetName, targetRole);
-    }, 150);
+        selectChatUser(targetIdStr, targetName || 'Organizer', targetRole || 'organizer');
+    }, 50);
 }
 
 function renderChatWorkspace(containerId) {
