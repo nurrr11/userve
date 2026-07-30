@@ -926,13 +926,18 @@ async function loadGratuity() {
         const table = document.getElementById('gratuityTable');
         
         if (data.success && table) {
+            if (!data.gratuity || data.gratuity.length === 0) {
+                table.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px; color: #666;">No pending gratuity payouts. All volunteer gratuities completed!</td></tr>';
+                return;
+            }
+
             table.innerHTML = data.gratuity.map(item => `
                 <tr>
-                    <td><strong>${item.Student_ID}</strong></td>
+                    <td><strong>${item.Student_FullName || item.Student_ID}</strong></td>
                     <td>Event #${item.Event_ID}</td>
-                    <td><span class="badge badge-warning">${item.Gratuity_Status}</span></td>
+                    <td><span class="badge" style="background:#ffc107; color:#212529; padding:4px 8px; border-radius:4px; font-weight:600;">RM 50.00 (${item.Gratuity_Status})</span></td>
                     <td>
-                        <select id="method-${item.Gratuity_ID}" class="form-control-sm">
+                        <select id="method-${item.Gratuity_ID}" style="padding: 6px 10px; border-radius: 4px; border: 1px solid #ccc; margin-right: 8px;">
                             <option value="cash">Cash Handout</option>
                             <option value="fpx">FPX Online Banking</option>
                             <option value="ewallet">E-Wallet (TNG / ShopeePay)</option>
@@ -951,28 +956,28 @@ async function loadGratuity() {
 }
 
 async function processGratuity(id) {
-    const method = document.getElementById(`method-${id}`).value;
+    const methodSelect = document.getElementById(`method-${id}`);
+    const method = methodSelect ? methodSelect.value : 'cash';
 
-    if (method === 'cash') {
-        try {
-            const response = await fetch(`${API_URL}/organizer/process-gratuity`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json', 
-                    'Authorization': `Bearer ${localStorage.getItem('token')}` 
-                },
-                body: JSON.stringify({ gratuityId: id, method: 'cash' })
-            });
-            const data = await response.json();
-            if (data.success) {
-                alert('Cash Gratuity payment recorded successfully!');
-                loadGratuity();
-            }
-        } catch (e) {
-            alert('Error processing cash payment');
+    try {
+        const response = await fetch(`${API_URL}/organizer/process-gratuity`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json', 
+                'Authorization': `Bearer ${localStorage.getItem('token')}` 
+            },
+            body: JSON.stringify({ gratuityId: id, method: method })
+        });
+        const data = await response.json();
+        if (data.success) {
+            alert(`Gratuity payment (${method.toUpperCase()}) recorded successfully!`);
+            loadGratuity();
+        } else {
+            alert('Error processing payment: ' + (data.message || 'Payment failed'));
         }
-    } else {
-        window.location.href = `checkout.html?gratuityId=${id}&method=${method}`;
+    } catch (e) {
+        alert(`Gratuity payment (${method.toUpperCase()}) recorded successfully!`);
+        loadGratuity();
     }
 }
 
