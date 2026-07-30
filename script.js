@@ -19,6 +19,14 @@ document.addEventListener('DOMContentLoaded', () => {
                window.location.pathname.includes('admin.html')) {
         window.location.href = 'index.html';
     }
+
+    if (window.location.pathname.includes('student.html')) {
+        showPage('studentDashboard');
+    } else if (window.location.pathname.includes('organizer.html')) {
+        showPage('dashboard');
+    } else if (window.location.pathname.includes('admin.html')) {
+        showPage('adminDashboard');
+    }
 });
 
 async function verifyToken() {
