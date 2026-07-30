@@ -20,16 +20,15 @@ const JWT_SECRET = process.env.JWT_SECRET || 'userve_secret_key_2026';
 
 const app = express();
 app.use(cors({
-    origin: function (origin, callback) {
-        if (!origin || allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
-            callback(null, true);
-        } else {
-            callback(null, true);
-        }
-    },
+    origin: '*',
     credentials: true
 }));
 app.use(express.json());
+
+// Health Check Endpoint for Railway / Cloud Deployment Monitoring
+app.get('/api/health', (req, res) => {
+    res.json({ success: true, status: 'online', timestamp: new Date() });
+});
 
 // 3. Wrap Express app with HTTP server
 const server = http.createServer(app);
@@ -1334,8 +1333,8 @@ app.post('/api/change-password', verifyToken, async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`✅ Server running with WebSockets on http://localhost:${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ Server running with WebSockets on port ${PORT}`);
     console.log(`📝 Default credentials:`);
     console.log(`   Student: student@userve.com / Student@123`);
     console.log(`   Organizer: organizer@userve.com / Org@2024`);
