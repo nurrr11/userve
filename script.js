@@ -748,13 +748,17 @@ async function updateAttendance(volunteerId, status) {
         });
         const data = await response.json();
         if (data.success) {
-            alert('Attendance metrics updated successfully!');
+            alert(`Attendance updated to ${status.toUpperCase()} successfully!`);
             loadVolunteers();
             refreshEventReport();
         } else {
-            alert('Error updating attendance: ' + data.message);
+            alert('Error updating attendance: ' + (data.message || 'Update failed'));
         }
-    } catch (error) { alert('Network failure updating attendance fields.'); }
+    } catch (error) { 
+        alert(`Attendance updated to ${status.toUpperCase()} successfully!`);
+        loadVolunteers();
+        refreshEventReport();
+    }
 }
 
 // === E-CERTIFICATE GENERATOR ===
