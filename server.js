@@ -97,7 +97,7 @@ app.get('/', (req, res) => {
 // ==============================================================
 
 // Student Registration Endpoint
-app.post('/api/register/student', async (req, res) => {
+app.post(['/api/register/student', '/register/student'], async (req, res) => {
     const { regID, regName, regEmail, regPass, regContact, regDOB } = req.body;
 
     // 1. Validate UiTM Student Email Format (@student.uitm.edu.my)
@@ -138,7 +138,7 @@ app.post('/api/register/student', async (req, res) => {
 });
 
 // Organizer Registration Endpoint
-app.post('/api/register/organizer', async (req, res) => {
+app.post(['/api/register/organizer', '/register/organizer'], async (req, res) => {
     const { orgID, orgName, orgEmail, orgPass, orgContact, orgCity, orgDOE } = req.body;
 
     // 1. Standard Email Check (Gmail, Yahoo, custom domains, etc.)
@@ -179,7 +179,7 @@ app.post('/api/register/organizer', async (req, res) => {
 });
 
 // SIMPLIFIED LOGIN
-app.post('/api/login', async (req, res) => {
+app.post(['/api/login', '/login'], async (req, res) => {
     const { email, password, role } = req.body;
     
     console.log(`Login attempt: ${email}, role: ${role}`);
@@ -278,7 +278,7 @@ app.post('/api/login', async (req, res) => {
 });
 
 // Verify token
-app.post('/api/verify', async (req, res) => {
+app.post(['/api/verify', '/verify'], async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ success: false });
     try {

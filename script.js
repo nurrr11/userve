@@ -1,4 +1,4 @@
-const API_URL = 'https://userve-production.up.railway.app';
+const API_URL = window.location.origin.includes('http') ? `${window.location.origin}/api` : '/api';
 
 let currentUser = null;
 let analyticsChart = null;
