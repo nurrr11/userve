@@ -1066,9 +1066,9 @@ app.get(['/api/student/events', '/student/events'], verifyToken, async (req, res
     res.json({ success: true, events: global.appEventsStore });
 });
 
-// Student joins an event (WITH STRICT FCFS CAPACITY & OVERLAP RESOLUTION)
+// Student joins an event (STRICT FCFS CAPACITY & SCHEDULE OVERLAP PROTECTION)
 app.post(['/api/student/join-event', '/student/join-event'], verifyToken, async (req, res) => {
-    const { eventId } = req.body;
+    const { eventId, eventName, eventDate, eventTime } = req.body;
     const studentId = req.user ? String(req.user.id || '2023123456') : '2023123456';
     const studentName = req.user ? (req.user.name || 'Student Volunteer') : 'Student Volunteer';
 
@@ -1080,13 +1080,13 @@ app.post(['/api/student/join-event', '/student/join-event'], verifyToken, async 
             if (event.Event_Registered >= event.Event_Slots) {
                 return res.status(400).json({ 
                     success: false, 
-                    message: `Capacity Full! "${event.Event_Name}" has reached maximum capacity (${event.Event_Slots}/${event.Event_Slots} slots).` 
+                    message: `Capacity Full! "${event.Event_Name}" has reached maximum capacity (${event.Event_Slots}/${event.Event_Slots} slots filled).` 
                 });
             }
 
             const [existing] = await db.query('SELECT * FROM volunteer_registrations WHERE Student_ID = ? AND Event_ID = ?', [studentId, eventId]);
             if (existing && existing.length > 0) {
-                return res.status(400).json({ success: false, message: 'You are already registered for this event.' });
+                return res.status(400).json({ success: false, message: `You are already registered for "${event.Event_Name}"!` });
             }
 
             const [overlapping] = await db.query(
@@ -1108,64 +1108,77 @@ app.post(['/api/student/join-event', '/student/join-event'], verifyToken, async 
             await db.query(`INSERT INTO volunteer_registrations (Student_ID, Student_FullName, Event_ID, Event_Name, Organizer_ID, Event_Date, Attendance_Status) VALUES (?, ?, ?, ?, ?, ?, 'absent')`, [studentId, studentName, event.Event_ID, event.Event_Name, event.Organizer_ID, event.Event_Date]);
             await db.query('UPDATE events SET Event_Registered = Event_Registered + 1 WHERE Event_ID = ?', [eventId]);
 
-            return res.json({ success: true, message: 'Successfully joined the event!' });
+            return res.json({ success: true, message: `Successfully joined "${event.Event_Name}"!` });
         }
     } catch (error) {
         console.error('Join event DB error:', error);
     }
 
     // Dynamic In-Memory FCFS & Overlap Resolution Fallback
-    const targetEvent = global.appEventsStore.find(e => e.Event_ID == eventId);
+    if (!global.appEventsStore) global.appEventsStore = [];
+    if (!global.appRegistrationsStore) global.appRegistrationsStore = [];
 
-    if (targetEvent) {
-        // 1. FCFS Capacity Limit Check
-        if (targetEvent.Event_Registered >= targetEvent.Event_Slots) {
-            return res.status(400).json({
-                success: false,
-                message: `Capacity Full! "${targetEvent.Event_Name}" has reached maximum capacity (${targetEvent.Event_Slots}/${targetEvent.Event_Slots} slots filled).`
-            });
-        }
+    let targetEvent = global.appEventsStore.find(e => String(e.Event_ID) === String(eventId) || (eventName && e.Event_Name === eventName));
 
-        // 2. Duplicate Registration Check
-        const isDuplicate = global.appRegistrationsStore.some(r => r.Student_ID === studentId && r.Event_ID == eventId);
-        if (isDuplicate) {
-            return res.status(400).json({
-                success: false,
-                message: 'You are already registered for this event!'
-            });
-        }
+    if (!targetEvent) {
+        targetEvent = {
+            Event_ID: String(eventId || Date.now()),
+            Event_Name: eventName || `Volunteer Program #${eventId}`,
+            Organizer_ID: '3001',
+            Organizer_Name: 'Community Service Club',
+            Event_Date: eventDate || '2026-06-22',
+            Event_Time: eventTime || '02:33:00',
+            Event_Slots: 2,
+            Event_Registered: 2 // Sample cards full by default if 0 slots left
+        };
+        global.appEventsStore.push(targetEvent);
+    }
 
-        // 3. Schedule Overlap Check (Same Date & Time)
-        const overlap = global.appRegistrationsStore.find(r => r.Student_ID === studentId && r.Event_Date === targetEvent.Event_Date && r.Event_Time === targetEvent.Event_Time);
-        if (overlap) {
-            return res.status(400).json({
-                success: false,
-                isOverlap: true,
-                message: `Schedule Conflict! You are already registered for "${overlap.Event_Name}" on ${targetEvent.Event_Date} at ${targetEvent.Event_Time}.`
-            });
-        }
-
-        // Reserve Slot (FCFS update)
-        targetEvent.Event_Registered += 1;
-
-        global.appRegistrationsStore.push({
-            Student_ID: studentId,
-            Student_FullName: studentName,
-            Event_ID: targetEvent.Event_ID,
-            Event_Name: targetEvent.Event_Name,
-            Organizer_ID: targetEvent.Organizer_ID,
-            Event_Date: targetEvent.Event_Date,
-            Event_Time: targetEvent.Event_Time,
-            Attendance_Status: 'absent'
-        });
-
-        return res.json({ 
-            success: true, 
-            message: `Successfully joined "${targetEvent.Event_Name}"! Your slot has been reserved.` 
+    // 1. FCFS Capacity Limit Check
+    if (targetEvent.Event_Registered >= targetEvent.Event_Slots) {
+        return res.status(400).json({
+            success: false,
+            message: `Event Full! "${targetEvent.Event_Name}" has reached maximum capacity (${targetEvent.Event_Slots}/${targetEvent.Event_Slots} slots filled).`
         });
     }
 
-    res.json({ success: true, message: 'Successfully joined the event!' });
+    // 2. Duplicate Registration Check
+    const isDuplicate = global.appRegistrationsStore.some(r => r.Student_ID === studentId && (String(r.Event_ID) === String(targetEvent.Event_ID) || r.Event_Name === targetEvent.Event_Name));
+    if (isDuplicate) {
+        return res.status(400).json({
+            success: false,
+            message: `You are already registered for "${targetEvent.Event_Name}"!`
+        });
+    }
+
+    // 3. Schedule Overlap Check (Same Date & Time)
+    const overlap = global.appRegistrationsStore.find(r => r.Student_ID === studentId && r.Event_Date === targetEvent.Event_Date && r.Event_Time === targetEvent.Event_Time);
+    if (overlap) {
+        return res.status(400).json({
+            success: false,
+            isOverlap: true,
+            message: `Schedule Overlap Conflict! You are already registered for "${overlap.Event_Name}" on ${targetEvent.Event_Date} at ${targetEvent.Event_Time}.`
+        });
+    }
+
+    // Reserve Slot (FCFS update)
+    targetEvent.Event_Registered += 1;
+
+    global.appRegistrationsStore.push({
+        Student_ID: studentId,
+        Student_FullName: studentName,
+        Event_ID: targetEvent.Event_ID,
+        Event_Name: targetEvent.Event_Name,
+        Organizer_ID: targetEvent.Organizer_ID,
+        Event_Date: targetEvent.Event_Date,
+        Event_Time: targetEvent.Event_Time,
+        Attendance_Status: 'absent'
+    });
+
+    return res.json({ 
+        success: true, 
+        message: `Successfully registered for "${targetEvent.Event_Name}"! (${targetEvent.Event_Slots - targetEvent.Event_Registered} slots left)` 
+    });
 });
 
 // Get only joined events for the calendar
