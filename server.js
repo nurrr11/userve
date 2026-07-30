@@ -26,8 +26,8 @@ app.use(cors({
 app.use(express.json());
 
 // Health Check Endpoint for Railway / Cloud Deployment Monitoring
-app.get('/api/health', (req, res) => {
-    res.json({ success: true, status: 'online', timestamp: new Date() });
+app.get(['/', '/health', '/api/health'], (req, res) => {
+    res.json({ success: true, status: 'online', app: 'UServe Backend System', timestamp: new Date() });
 });
 
 // 3. Wrap Express app with HTTP server
