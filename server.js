@@ -18,6 +18,8 @@ require('dotenv').config();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'userve_secret_key_2026';
 
+const path = require('path');
+
 const app = express();
 app.use(cors({
     origin: '*',
@@ -25,9 +27,18 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Serve static HTML, CSS, JS files for Railway
+app.use(express.static(path.join(__dirname, '.')));
+app.use(express.static(__dirname));
+
 // Health Check Endpoint for Railway / Cloud Deployment Monitoring
-app.get(['/', '/health', '/api/health'], (req, res) => {
+app.get(['/health', '/api/health'], (req, res) => {
     res.json({ success: true, status: 'online', app: 'UServe Backend System', timestamp: new Date() });
+});
+
+// Root Route fallback to index.html
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // 3. Wrap Express app with HTTP server
