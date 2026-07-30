@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UServe - Payment Gateway</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #821131; }
+        .checkout-box { background: #fff8e6; border-radius: 12px; padding: 30px; width: 100%; max-width: 480px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+        .bank-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
+        .bank-btn { border: 1px solid #ccc; padding: 12px; border-radius: 8px; background: #fafafa; font-weight: 600; cursor: pointer; text-align: center; transition: 0.2s; }
+        .bank-btn:hover { background: #e7f1ff; border-color: #007bff; color: #007bff; }
+        .qr-placeholder { background: #f8f9fa; border: 2px dashed #ccc; height: 160px; width: 160px; margin: 15px auto; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-weight: bold; color: #666; }
+    </style>
+</head>
+<body>
+
+    <div class="checkout-box">
+        <h2 id="gatewayTitle">Secure Payment Gateway</h2>
+        <p style="color: #666; font-size: 0.9rem;">Reference ID: <strong id="refId"></strong></p>
+        <hr style="margin: 15px 0; border: 0; border-top: 1fr solid #eee;">
+
+        <div id="fpxScreen">
+            <p><strong>Select Your Financial Institution (FPX):</strong></p>
+            <div class="bank-grid">
+                <button class="bank-btn" style="background: #fabc3f;" onclick="completePayment()">Maybank2u</button>
+                <button class="bank-btn" style="background: #fabc3f;" onclick="completePayment()">CIMB Clicks</button>
+                <button class="bank-btn" style="background: #fabc3f;" onclick="completePayment()">Bank Islam</button>
+                <button class="bank-btn" style="background: #fabc3f;" onclick="completePayment()">RHB NOW</button>
+                <button class="bank-btn" style="background: #fabc3f;" onclick="completePayment()">HSBC</button>
+                <button class="bank-btn" style="background: #fabc3f;" onclick="completePayment()">Hong Leong</button>
+            </div>
+        </div>
+
+        <div id="cardScreen" style="display:none;">
+            <div class="form-group">
+                <label>Cardholder Name</label>
+                <input type="text" class="form-control" placeholder="Ahmad bin Zulkifli">
+            </div>
+            <div class="form-group">
+                <label>Card Number</label>
+                <input type="text" class="form-control" placeholder="4111 •••• •••• 1111">
+            </div>
+            <div class="form-row" style="display:flex; gap:10px;">
+                <div class="form-group" style="flex:1;">
+                    <label>Expiry</label>
+                    <input type="text" class="form-control" placeholder="MM/YY">
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label>CVV</label>
+                    <input type="password" class="form-control" placeholder="123">
+                </div>
+            </div>
+            <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="completePayment()">Pay Now</button>
+        </div>
+
+        <div id="ewalletScreen" style="display:none; text-align: center;">
+            <p>Scan QR code using <strong>Touch 'n Go eWallet</strong> or <strong>ShopeePay</strong>:</p>
+            <div class="qr-placeholder">
+                <h1><img src="qrcode.jpg" alt="QRCode" width="170" height="170" style="margin-top: 15px;"></h1>
+            </div>
+            <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="completePayment()">I Have Completed Payment</button>
+        </div>
+
+        <button class="btn btn-secondary" style="width: 100%; margin-top: 10px; background: #6c757d; color: white; border:none; padding:10px; border-radius:6px; cursor:pointer;" onclick="cancelPayment()">Cancel Transaction</button>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const gratuityId = urlParams.get('gratuityId');
+        const method = urlParams.get('method');
+
+        document.getElementById('refId').innerText = 'PAY-' + Math.floor(100000 + Math.random() * 900000);
+
+        // Display corresponding sub-screen
+        if (method === 'card') {
+            document.getElementById('fpxScreen').style.display = 'none';
+            document.getElementById('cardScreen').style.display = 'block';
+            document.getElementById('gatewayTitle').innerText = 'Credit / Debit Card Payment';
+        } else if (method === 'ewallet') {
+            document.getElementById('fpxScreen').style.display = 'none';
+            document.getElementById('ewalletScreen').style.display = 'block';
+            document.getElementById('gatewayTitle').innerText = 'E-Wallet Payment';
+        }
+
+        async function completePayment() {
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch('http://localhost:3000/api/organizer/process-gratuity', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        'Authorization': `Bearer ${token}` 
+                    },
+                    body: JSON.stringify({ gratuityId: gratuityId, method: method })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert('✅ Payment processed successfully via Simulated Gateway!');
+                    window.location.href = 'organizer.html';
+                } else {
+                    alert('Payment processing failed.');
+                }
+            } catch (err) {
+                alert('Connection error during payment processing.');
+            }
+        }
+
+        function cancelPayment() {
+            window.location.href = 'organizer.html';
+        }
+    </script>
+</body>
+</html>

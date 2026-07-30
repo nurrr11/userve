@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <title>UServe - Student</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <img src="student_logo.png" alt="StudentLogo" width="100" height="100">
+            <nav>
+                <button class="nav-btn active" onclick="showPage('studentDashboard')">Dashboard</button>
+                <button class="nav-btn" onclick="showPage('studentCalendar')">Calendar</button>
+                <button class="nav-btn" onclick="showPage('activityRecord')">Activity Record</button>
+                <button class="nav-btn" onclick="showPage('studentIssue')">Report Centre</button>
+                <button class="nav-btn" onclick="showPage('studentChat')">Chat Centre</button>
+                <button class="nav-btn" onclick="showPage('studentProfile')">Profile</button>
+                <button class="btn-logout" onclick="logout()">Logout</button>
+            </nav>
+        </div>
+
+        <main class="main-content">
+            <div id="studentDashboardPage" class="page active">
+                <h1>Events Centre</h1>
+                <div id="availableEventsList" class="events-grid"></div>
+            </div>
+
+            <div id="studentProfilePage" class="page" style="display:none;">
+                <h1>My Profile</h1>
+                <div class="card">
+                    <div id="studentProfileDetails"></div>
+                    <hr style="margin: 20px 0;">
+                    <h3 style= "color: #821131;">Change Password</h3>
+                    <div class="form-group">
+                        <label style="color: #821131;">Current Password</label>
+                        <input type="password" id="currentPassword" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label style="color: #821131;">New Password</label>
+                        <input type="password" id="newPassword" class="form-control">
+                        <small class="text-muted">*Must be at least 8 characters, uppercase, lowercase, number, and special character.</small>
+                    </div>
+                    <div class="form-group">
+                        <label style="color: #821131;">Confirm New Password</label>
+                        <input type="password" id="confirmPassword" class="form-control">
+                    </div>
+                    <button class="btn btn-secondary" onclick="updatePassword()">Update Password</button>
+                </div>
+            </div>
+
+            <div id="studentCalendarPage" class="page" style="display:none;">
+                <h1>My Schedule</h1>
+                <div id="calendar"></div>
+            </div>
+
+            <div id="activityRecordPage" class="page" style="display:none;">
+                <div class="header-flex">
+                    <h1>My Activity Record</h1>
+                </div>
+
+                <div class="analytics-grid" id="studentStats">
+                    <div class="stat-card" style="border-top: 4px solid #4e83df; color: #4e83df;">
+                        <h3 style="color: #4e83df;" id="totalJoined">0</h3>
+                        <p>Events Joined</p>
+                    </div>
+                    <div class="stat-card" style="border-top: 4px solid #4edfc9; color: #4edfc9;">
+                        <h3 style="color: #4edfc9;" id="totalPresent">0</h3>
+                        <p>Completed (Present)</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2 style="color: #821131;">Volunteer History</h2>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Event Name</th>
+                                    <th>Date</th>
+                                    <th>Organizer ID</th>
+                                    <th>Status</th>
+                                    <th>Certificate</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentActivityTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="studentIssuePage" class="page" style="display:none;">
+                <h1>Issue Reports Centre</h1>
+                <div class="card">
+                    <div class="form-group">
+                        <label style= "color: #821131;">Issue Details</label>
+                        <textarea id="issueDetails" rows="5" class="form-control" placeholder="Please describe the issue you're experiencing. (Example: technical glitch, student misconduct, equipment damage)"></textarea>
+                    </div>
+                    <button class="btn btn-secondary" onclick="submitIssueReport()">Submit</button>
+                </div>
+
+                <h3 style="margin-top: 30px;">My Previous Reports</h3>
+                <div id="myReportsList" class="reports-list"></div>
+            </div>
+            
+            <div id="studentChatPage" class="page" style="display:none;">
+                <h1>Messages</h1>
+                <div id="studentChatContainer" style="margin-top: 20px;"></div>
+            </div>
+             
+            <!-- Certificate PDF/Image Viewer Modal -->
+            <div id="certViewerModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.75); z-index: 9999; flex-direction: column;">
+                <!-- Modal Navigation Toolbar -->
+                <div style="background-color: #323639; color: #ffffff; display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <strong style="font-size: 16px;">Certificate Preview</strong>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <button onclick="downloadCertAsPNG()" style="background-color: #767f85; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-weight: 600;">Download as PNG</button>
+                        <button onclick="downloadCertAsPDF()" style="background-color: #767f85; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-weight: 600;">Download as PDF</button>
+                        <button onclick="closeCertModal()" style="background-color: #dc3545; color: white; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; margin-left: 15px;">Close</button>
+                    </div>
+                </div>
+
+                <!-- Viewer Canvas Display Container -->
+                <div style="flex: 1; overflow: auto; display: flex; justify-content: center; align-items: center; padding: 20px;">
+                    <canvas id="cert-modal-canvas" style="background-color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.5); max-width: 90%; max-height: 85vh; border-radius: 4px;"></canvas>
+                </div>
+            </div>
+
+            <!-- Hidden Certificate Template for html2canvas Rendering -->
+            <div id="certTemplateWrapper" style="position: absolute; left: -9999px; top: -9999px; width: 1000px; height: 700px;">
+                <div id="certificate-template" style="width: 1000px; height: 700px; padding: 40px; background: #ffffff; border: 15px solid #821131; box-sizing: border-box; text-align: center; font-family: 'Georgia', serif; position: relative;">
+                    <div style="border: 4px double #fabc3f; height: 100%; width: 100%; padding: 30px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between;">     
+                        <h1 style="font-size: 33px; color: #821131; text-transform: uppercase; letter-spacing: 2px;">
+                            <img src="UServe_Cert_Logo.png" alt="Certificate" width="300" height="70" style="align-items: center;">
+                            Certificate of Appreciation</h1>
+                        <p style="font-size: 18px; color: #555; margin-top: 2px; margin-bottom: 2px;">This certificate is proudly presented to</p>
+                        <h2 id="cert-student-name" style="font-size: 23px; color: #821131; margin-top: 2px;">[Student Name]</h2>
+                        <p style="font-size: 18px; color: #555;">for participation and voluntary service in</p>
+                            
+                        <h3 id="cert-event-name" style="font-size: 23px; color: #821131; margin: 1px 0;">[Event Name]</h3>
+                        <p style="font-size: 18px; color: #555;">on</p>
+
+                        <p id="cert-event-details" style="font-size: 20px; color: #821131; font-weight: bold;">[Date & Location]</p>
+                        <div style="margin-top: 30px; display: flex; justify-content: space-around; align-items: flex-end;">
+                            <div style="border-top: 2px solid #821131; width: 200px; padding-top: 5px;">
+                                <p style="font-size: 14px; color: #333; margin: 0;"><strong>UServe Platform</strong></p>
+                            </div>
+                            <div style="border-top: 2px solid #821131; width: 200px; padding-top: 5px;">
+                                <p style="font-size: 14px; color: #333; margin: 0;"><strong>Event Organizer</strong></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </main>
+    </div>
+    <script src="script.js"></script>    
+</body>
+</html>

@@ -1,0 +1,22 @@
+{
+    "sqltools.connections": [
+        {
+            "mysqlOptions": {
+                "authProtocol": "default",
+                "enableSsl": "Disabled"
+            },
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 3306,
+            "driver": "MySQL",
+            "name": "MySQL Local",
+            "database": "deepseek_db",
+            "username": "root",
+            "connectionTimeout": 30,
+            "group": "MySQL",
+            "password": "UiTM@dil@99!"
+        }
+    ],
+    "workbench.colorTheme": "Visual Studio Dark"
+}
