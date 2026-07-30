@@ -993,6 +993,41 @@ app.get('/api/student/my-certificates', verifyToken, async (req, res) => {
     } catch (e) { res.status(500).json({ success: false }); }
 });
 
+// In-memory data store for live fallback state (Events, Registrations, Issue Reports)
+if (!global.appEventsStore) {
+    global.appEventsStore = [
+        { Event_ID: 1, Event_Name: 'UiTM Campus Greenery & Tree Planting', Organizer_ID: '3001', Organizer_Name: 'UiTM Eco Volunteer Club', Event_Date: '2026-08-15', Event_Time: '08:00:00', Event_Location: 'UiTM Shah Alam Central Park', Event_Slots: 50, Event_Registered: 12 },
+        { Event_ID: 2, Event_Name: 'Community Food Bank Distribution Drive', Organizer_ID: '3002', Organizer_Name: 'Youth Care Alliance', Event_Date: '2026-08-20', Event_Time: '09:30:00', Event_Location: 'Dewan Agung Tuanku Canselor', Event_Slots: 30, Event_Registered: 18 },
+        { Event_ID: 3, Event_Name: 'Beach Clean-Up & Ocean Protection', Organizer_ID: '3003', Organizer_Name: 'Ocean Clean Society', Event_Date: '2026-08-25', Event_Time: '07:30:00', Event_Location: 'Pantai Remis Volunteer Hub', Event_Slots: 40, Event_Registered: 25 }
+    ];
+}
+if (!global.appRegistrationsStore) {
+    global.appRegistrationsStore = [];
+}
+if (!global.appReportsStore) {
+    global.appReportsStore = [
+        {
+            IssueReport_ID: 1,
+            Student_ID: '2023123456',
+            Student_FullName: 'Ahmad Faiz Bin Abdullah',
+            Report_Details: 'Need assistance regarding attendance update for Tree Planting program.',
+            Report_Date: '2026-07-29',
+            Report_Time: '10:15:00',
+            status: 'pending'
+        },
+        {
+            IssueReport_ID: 2,
+            Organizer_ID: '3001',
+            Organizer_Name: 'UiTM Eco Volunteer Club',
+            Report_Details: 'Requesting venue reservation approval for Food Bank drive.',
+            Report_Date: '2026-07-28',
+            Report_Time: '14:30:00',
+            status: 'resolved',
+            response: 'Resolved by Admin'
+        }
+    ];
+}
+
 // Get all available events for students to join
 app.get(['/api/student/events', '/student/events'], verifyToken, async (req, res) => {
     try {
@@ -1004,75 +1039,32 @@ app.get(['/api/student/events', '/student/events'], verifyToken, async (req, res
         console.error('Error fetching events for students:', error);
     }
 
-    // Default sample events if DB is empty or connecting
-    const sampleEvents = [
-        {
-            Event_ID: 1,
-            Event_Name: 'UiTM Campus Greenery & Tree Planting',
-            Organizer_ID: '3001',
-            Organizer_Name: 'UiTM Eco Volunteer Club',
-            Event_Date: '2026-08-15',
-            Event_Time: '08:00:00',
-            Event_Location: 'UiTM Shah Alam Central Park',
-            Event_Slots: 50,
-            Event_Registered: 12
-        },
-        {
-            Event_ID: 2,
-            Event_Name: 'Community Food Bank Distribution Drive',
-            Organizer_ID: '3002',
-            Organizer_Name: 'Youth Care Alliance',
-            Event_Date: '2026-08-20',
-            Event_Time: '09:30:00',
-            Event_Location: 'Dewan Agung Tuanku Canselor',
-            Event_Slots: 30,
-            Event_Registered: 18
-        },
-        {
-            Event_ID: 3,
-            Event_Name: 'Beach Clean-Up & Ocean Protection',
-            Organizer_ID: '3003',
-            Organizer_Name: 'Ocean Clean Society',
-            Event_Date: '2026-08-25',
-            Event_Time: '07:30:00',
-            Event_Location: 'Pantai Remis Volunteer Hub',
-            Event_Slots: 40,
-            Event_Registered: 25
-        }
-    ];
-
-    res.json({ success: true, events: sampleEvents });
+    res.json({ success: true, events: global.appEventsStore });
 });
 
-// Student joins an event (WITH OVERLAP RESOLUTION & SAMPLE EVENT FALLBACK)
+// Student joins an event (WITH STRICT FCFS CAPACITY & OVERLAP RESOLUTION)
 app.post(['/api/student/join-event', '/student/join-event'], verifyToken, async (req, res) => {
     const { eventId } = req.body;
-    const studentId = req.user.id;
-    const studentName = req.user.name;
+    const studentId = req.user ? String(req.user.id || '2023123456') : '2023123456';
+    const studentName = req.user ? (req.user.name || 'Student Volunteer') : 'Student Volunteer';
 
     try {
         const [eventRows] = await db.query('SELECT * FROM events WHERE Event_ID = ?', [eventId]);
         if (eventRows && eventRows.length > 0) {
             const event = eventRows[0];
 
-            // 1. Capacity Check
             if (event.Event_Registered >= event.Event_Slots) {
                 return res.status(400).json({ 
                     success: false, 
-                    message: 'Sorry, this event just reached its maximum capacity!' 
+                    message: `Capacity Full! "${event.Event_Name}" has reached maximum capacity (${event.Event_Slots}/${event.Event_Slots} slots).` 
                 });
             }
 
-            // 2. Duplicate Registration Check
-            const [existing] = await db.query(
-                'SELECT * FROM volunteer_registrations WHERE Student_ID = ? AND Event_ID = ?', 
-                [studentId, eventId]
-            );
-            if (existing.length > 0) {
+            const [existing] = await db.query('SELECT * FROM volunteer_registrations WHERE Student_ID = ? AND Event_ID = ?', [studentId, eventId]);
+            if (existing && existing.length > 0) {
                 return res.status(400).json({ success: false, message: 'You are already registered for this event.' });
             }
 
-            // 3. OVERLAP RESOLUTION
             const [overlapping] = await db.query(
                 `SELECT e.Event_Name, e.Event_Date, e.Event_Time 
                  FROM volunteer_registrations v 
@@ -1081,22 +1073,15 @@ app.post(['/api/student/join-event', '/student/join-event'], verifyToken, async 
                 [studentId, event.Event_Date, event.Event_Time]
             );
 
-            if (overlapping.length > 0) {
+            if (overlapping && overlapping.length > 0) {
                 return res.status(400).json({ 
                     success: false, 
                     isOverlap: true,
-                    message: `Schedule Conflict! You are already registered for "${overlapping[0].Event_Name}" on ${formatDate(event.Event_Date)} at ${formatTime(event.Event_Time)}.` 
+                    message: `Schedule Conflict! You are already registered for "${overlapping[0].Event_Name}" on ${event.Event_Date} at ${event.Event_Time}.` 
                 });
             }
 
-            // Register student if no overlap found
-            await db.query(
-                `INSERT INTO volunteer_registrations 
-                (Student_ID, Student_FullName, Event_ID, Event_Name, Organizer_ID, Event_Date, Attendance_Status) 
-                VALUES (?, ?, ?, ?, ?, ?, 'absent')`,
-                [studentId, studentName, event.Event_ID, event.Event_Name, event.Organizer_ID, event.Event_Date]
-            );
-
+            await db.query(`INSERT INTO volunteer_registrations (Student_ID, Student_FullName, Event_ID, Event_Name, Organizer_ID, Event_Date, Attendance_Status) VALUES (?, ?, ?, ?, ?, ?, 'absent')`, [studentId, studentName, event.Event_ID, event.Event_Name, event.Organizer_ID, event.Event_Date]);
             await db.query('UPDATE events SET Event_Registered = Event_Registered + 1 WHERE Event_ID = ?', [eventId]);
 
             return res.json({ success: true, message: 'Successfully joined the event!' });
@@ -1105,7 +1090,57 @@ app.post(['/api/student/join-event', '/student/join-event'], verifyToken, async 
         console.error('Join event DB error:', error);
     }
 
-    // Fallback success response for sample events when DB is offline or empty
+    // Dynamic In-Memory FCFS & Overlap Resolution Fallback
+    const targetEvent = global.appEventsStore.find(e => e.Event_ID == eventId);
+
+    if (targetEvent) {
+        // 1. FCFS Capacity Limit Check
+        if (targetEvent.Event_Registered >= targetEvent.Event_Slots) {
+            return res.status(400).json({
+                success: false,
+                message: `Capacity Full! "${targetEvent.Event_Name}" has reached maximum capacity (${targetEvent.Event_Slots}/${targetEvent.Event_Slots} slots filled).`
+            });
+        }
+
+        // 2. Duplicate Registration Check
+        const isDuplicate = global.appRegistrationsStore.some(r => r.Student_ID === studentId && r.Event_ID == eventId);
+        if (isDuplicate) {
+            return res.status(400).json({
+                success: false,
+                message: 'You are already registered for this event!'
+            });
+        }
+
+        // 3. Schedule Overlap Check (Same Date & Time)
+        const overlap = global.appRegistrationsStore.find(r => r.Student_ID === studentId && r.Event_Date === targetEvent.Event_Date && r.Event_Time === targetEvent.Event_Time);
+        if (overlap) {
+            return res.status(400).json({
+                success: false,
+                isOverlap: true,
+                message: `Schedule Conflict! You are already registered for "${overlap.Event_Name}" on ${targetEvent.Event_Date} at ${targetEvent.Event_Time}.`
+            });
+        }
+
+        // Reserve Slot (FCFS update)
+        targetEvent.Event_Registered += 1;
+
+        global.appRegistrationsStore.push({
+            Student_ID: studentId,
+            Student_FullName: studentName,
+            Event_ID: targetEvent.Event_ID,
+            Event_Name: targetEvent.Event_Name,
+            Organizer_ID: targetEvent.Organizer_ID,
+            Event_Date: targetEvent.Event_Date,
+            Event_Time: targetEvent.Event_Time,
+            Attendance_Status: 'absent'
+        });
+
+        return res.json({ 
+            success: true, 
+            message: `Successfully joined "${targetEvent.Event_Name}"! Your slot has been reserved.` 
+        });
+    }
+
     res.json({ success: true, message: 'Successfully joined the event!' });
 });
 
