@@ -93,7 +93,6 @@ function validatePassword(password) {
 // ==============================================================
 // HOMEPAGE ROUTE
 // ==============================================================
-const path = require('path');
 
 // 1. Tell Express to serve your static frontend files (index.html, script.js, style.css, etc.)
 app.use(express.static(__dirname));
@@ -1509,12 +1508,6 @@ app.post(['/api/admin/reject-user', '/admin/reject-user'], verifyToken, requireA
     }
 
     return res.json({ success: true, message: 'User registration rejected and removed successfully.' });
-});
-
-    } catch (err) {
-        console.error('Reject Error:', err);
-        return res.status(500).json({ success: false, message: 'Failed to reject user: ' + err.message });
-    }
 });
 
 // 4a. Read Global Issue Feed logs (Issue Centre) - ALIGNED WITH YOUR ENUM & SCHEMA (CENTRALIZED ISSUE REPORTS ENDPOINT)
