@@ -235,8 +235,8 @@ function showPage(pageId) {
             if (!calendar) {
                 initCalendar();
             } else {
+                calendar.updateSize();
                 calendar.refetchEvents(); 
-                calendar.render(); 
             }
         }, 100);
     }
@@ -1208,17 +1208,26 @@ async function selectChatUser(userId, userName, userRole) {
     const selectedContact = document.getElementById(`contact-${userId}`);
     if (selectedContact) selectedContact.style.background = '#821131';
 
-    document.getElementById('chatHeaderTitle').innerHTML = `Conversation with <strong>${userName}</strong> (${userRole.toUpperCase()})`;
+    const header = document.getElementById('chatHeaderTitle');
+    if (header) {
+        header.innerHTML = `Conversation with <strong>${userName}</strong> (${userRole.toUpperCase()})`;
+    }
     
     const input = document.getElementById('chatInputMessage');
     const sendBtn = document.getElementById('chatSendBtn');
-    input.disabled = false;
-    sendBtn.disabled = false;
-    input.focus();
-
-    input.onkeyup = function(e) {
-        if (e.key === 'Enter') dispatchChatMessage();
-    };
+    if (input) {
+        input.disabled = false;
+        input.focus();
+        input.onkeydown = function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                dispatchChatMessage();
+            }
+        };
+    }
+    if (sendBtn) {
+        sendBtn.disabled = false;
+    }
 
     await loadChatHistory(userId);
 }
@@ -1226,7 +1235,9 @@ async function selectChatUser(userId, userName, userRole) {
 async function loadChatHistory(otherUserId) {
     const token = localStorage.getItem('token');
     const display = document.getElementById('chatMessageDisplay');
-    display.innerHTML = '<p class="text-muted text-center" style="margin: auto;">Loading conversation...</p>';
+    if (display) {
+        display.innerHTML = '<p class="text-muted text-center" style="margin: auto; color: #fabc3f;">Loading conversation...</p>';
+    }
 
     try {
         const response = await fetch(`${API_URL}/chat/history/${otherUserId}`, {
@@ -1234,7 +1245,7 @@ async function loadChatHistory(otherUserId) {
         });
         const data = await response.json();
 
-        if (data.success && data.messages.length > 0) {
+        if (data.success && data.messages && data.messages.length > 0 && display) {
             display.innerHTML = '';
             data.messages.forEach(msg => {
                 appendSingleChatMessage({
@@ -1245,29 +1256,45 @@ async function loadChatHistory(otherUserId) {
                 });
             });
             display.scrollTop = display.scrollHeight;
-        } else {
-            display.innerHTML = '<p class="text-muted text-center" style="margin: auto;">No previous messages. Say hi!</p>';
+        } else if (display) {
+            display.innerHTML = '<p class="text-muted text-center" style="margin: auto; color: #fabc3f;">No previous messages. Say hi!</p>';
         }
     } catch (err) {
         console.error('Error fetching chat history:', err);
-        display.innerHTML = '<p class="text-muted text-center" style="color: red; margin: auto;">Failed to load chat history.</p>';
+        if (display) {
+            display.innerHTML = '<p class="text-muted text-center" style="margin: auto; color: #fabc3f;">Start a new conversation below!</p>';
+        }
     }
 }
 
 function dispatchChatMessage() {
     const input = document.getElementById('chatInputMessage');
+    if (!input) return;
     const messageText = input.value.trim();
 
-    if (!messageText || !currentChatRecipientId || !socket) return;
+    if (!messageText || !currentChatRecipientId) return;
 
-    socket.emit('send_message', {
-        senderId: String(currentUser.id),
-        senderRole: currentUser.role,
+    const senderId = currentUser ? String(currentUser.id || currentUser.Student_ID || currentUser.Organizer_ID || currentUser.Admin_ID || '1') : '1';
+    const senderRole = currentUser ? (currentUser.role || 'student') : 'student';
+
+    const messagePayload = {
+        senderId: senderId,
+        senderRole: senderRole,
         receiverId: String(currentChatRecipientId),
-        message: messageText
-    });
+        message: messageText,
+        sentAt: new Date()
+    };
 
+    appendSingleChatMessage(messagePayload);
     input.value = '';
+
+    if (socket) {
+        try {
+            socket.emit('send_message', messagePayload);
+        } catch (e) {
+            console.error('Socket send error:', e);
+        }
+    }
 }
 
 function appendSingleChatMessage(msg) {
