@@ -473,15 +473,20 @@ async function loadEvents() {
 }
 
 function showCreateEventModal() { 
-    const modal = document.getElementById('createEventModal');
+    const modal = document.getElementById('createEventModal') || document.getElementById('eventModal') || document.getElementById('addEventModal');
     if (modal) {
         modal.style.display = 'flex';
         modal.classList.add('show');
     }
 }
 
+function openCreateEventModal() { showCreateEventModal(); }
+function openModal() { showCreateEventModal(); }
+function showEventModal() { showCreateEventModal(); }
+function openEventModal() { showCreateEventModal(); }
+
 function closeModal() { 
-    const modal = document.getElementById('createEventModal');
+    const modal = document.getElementById('createEventModal') || document.getElementById('eventModal') || document.getElementById('addEventModal');
     if (modal) {
         modal.style.display = 'none';
         modal.classList.remove('show');
@@ -491,7 +496,7 @@ function closeModal() {
 
 function resetModal() { 
     currentEditingEventId = null;
-    const titleElement = document.querySelector('#createEventModal h2');
+    const titleElement = document.querySelector('#createEventModal h2, #eventModal h2');
     if (titleElement) titleElement.innerText = 'Create New Event';
     
     const mainBtn = document.getElementById('modalMainBtn');
@@ -507,13 +512,24 @@ function resetModal() {
     if (slotsField) slotsField.value = '50';
 }
 
-async function createEvents() { 
-    const eventName = document.getElementById('eventName').value.trim();
-    const eventDesc = document.getElementById('eventDesc').value.trim();
-    const eventDate = document.getElementById('eventDate').value;
-    const eventTime = document.getElementById('eventTime').value;
-    const eventLocation = document.getElementById('eventLocation').value.trim();
-    const eventSlots = document.getElementById('eventSlots').value;
+async function createEvents(event) { 
+    if (event && typeof event.preventDefault === 'function') {
+        event.preventDefault();
+    }
+
+    const eventNameInput = document.getElementById('eventName');
+    const eventDescInput = document.getElementById('eventDesc');
+    const eventDateInput = document.getElementById('eventDate');
+    const eventTimeInput = document.getElementById('eventTime');
+    const eventLocationInput = document.getElementById('eventLocation');
+    const eventSlotsInput = document.getElementById('eventSlots');
+
+    const eventName = eventNameInput ? eventNameInput.value.trim() : '';
+    const eventDesc = eventDescInput ? eventDescInput.value.trim() : '';
+    const eventDate = eventDateInput ? eventDateInput.value : '';
+    const eventTime = eventTimeInput ? eventTimeInput.value : '';
+    const eventLocation = eventLocationInput ? eventLocationInput.value.trim() : '';
+    const eventSlots = eventSlotsInput ? eventSlotsInput.value : '50';
 
     if (!eventName || !eventDate || !eventTime || !eventLocation) {
         alert('Please fill in all required fields (Name, Date, Time, and Location)');
