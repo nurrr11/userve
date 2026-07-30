@@ -457,6 +457,7 @@ async function loadEvents() {
         });
         const data = await response.json();
         if (data.success && data.events) {
+            window.loadedEventsCache = data.events;
             document.getElementById('eventsList').innerHTML = data.events.map(event => `
                 <div class="card">
                     <div style="display: flex; justify-content: space-between; align-items: start;">
@@ -472,8 +473,8 @@ async function loadEvents() {
                         </div>
                     </div>
                     <hr>
-                    <button class="btn btn-primary" onclick="editEvent(${event.Event_ID})">Edit</button>
-                    <button class="btn btn-danger" onclick="deleteEvent(${event.Event_ID})">Delete</button>
+                    <button class="btn btn-primary" onclick="editEvent('${event.Event_ID}')">Edit</button>
+                    <button class="btn btn-danger" onclick="deleteEvent('${event.Event_ID}')">Delete</button>
                 </div>
             `).join('');
         }
@@ -579,29 +580,53 @@ async function createEvents(event) {
 async function editEvent(eventId) { 
     currentEditingEventId = eventId;
     try {
-        const response = await fetch(`${API_URL}/organizer/events`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        });
-        const data = await response.json();
-        const event = data.events.find(e => e.Event_ID === eventId);
+        let event = null;
+
+        if (window.loadedEventsCache && window.loadedEventsCache.length > 0) {
+            event = window.loadedEventsCache.find(e => String(e.Event_ID) === String(eventId));
+        }
+
+        if (!event) {
+            const response = await fetch(`${API_URL}/organizer/events`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
+            const data = await response.json();
+            if (data && data.events) {
+                window.loadedEventsCache = data.events;
+                event = data.events.find(e => String(e.Event_ID) === String(eventId));
+            }
+        }
 
         if (event) {
-            document.getElementById('eventName').value = event.Event_Name;
-            document.getElementById('eventDesc').value = event.Event_Desc || '';
-            document.getElementById('eventDate').value = event.Event_Date;
-            document.getElementById('eventTime').value = event.Event_Time;
-            document.getElementById('eventLocation').value = event.Event_Location;
-            document.getElementById('eventSlots').value = event.Event_Slots;
+            const nameField = document.getElementById('eventName');
+            const descField = document.getElementById('eventDesc');
+            const dateField = document.getElementById('eventDate');
+            const timeField = document.getElementById('eventTime');
+            const locField = document.getElementById('eventLocation');
+            const slotsField = document.getElementById('eventSlots');
 
-            document.querySelector('#createEventModal h2').innerText = 'Edit Event';
+            if (nameField) nameField.value = event.Event_Name || '';
+            if (descField) descField.value = event.Event_Desc || '';
+            if (dateField) dateField.value = event.Event_Date || '';
+            if (timeField) timeField.value = event.Event_Time || '';
+            if (locField) locField.value = event.Event_Location || '';
+            if (slotsField) slotsField.value = event.Event_Slots || '50';
+
+            const titleEl = document.querySelector('#createEventModal h2, #eventModal h2');
+            if (titleEl) titleEl.innerText = 'Edit Event';
+
             const mainBtn = document.getElementById('modalMainBtn');
             if (mainBtn) {
                 mainBtn.innerText = 'Update Event';
                 mainBtn.onclick = updateEvent;
             }
+
             showCreateEventModal();
+        } else {
+            alert('Event details not found.');
         }
     } catch (error) {
+        console.error('Edit event error:', error);
         alert('Error loading event data');
     }
 }
