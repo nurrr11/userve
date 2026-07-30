@@ -764,7 +764,8 @@ async function loadCertificates() {
 }
 
 async function generateCertificates() {
-    const eventId = document.getElementById('certEventSelect').value;
+    const certEventSelect = document.getElementById('certEventSelect') || document.getElementById('eventSelect');
+    const eventId = certEventSelect ? certEventSelect.value : '';
     if (!eventId) return alert('Please select an event first!');
     try {
         const response = await fetch(`${API_URL}/organizer/generate-certificates/${eventId}`, {
@@ -773,9 +774,9 @@ async function generateCertificates() {
         });
         const data = await response.json();
         if (data.success) {
-            alert(data.message);
+            alert(data.message || 'Successfully generated e-certificates!');
             loadCertificates(); 
-        } else { alert('Generation failed: ' + data.message); }
+        } else { alert('Generation failed: ' + (data.message || 'Could not generate certificates')); }
     } catch (error) { alert('Error communicating with server'); }
 }
 
